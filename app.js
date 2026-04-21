@@ -192,9 +192,24 @@ async function showDashboard() {
 }
 
 function renderDashboard(user, txns, results, skills) {
-
   const totalXP = txns.reduce((s, t) => s + t.amount, 0);
-  const auditRatio = user.auditRatio ? user.auditRatio.toFixed(2) : '—';
+
+  const ratioVal = user.auditRatio || 0;
+  let ratioClass = 'pass-c'; 
+
+  let ratioColor = 'var(--pass)';
+
+  if (ratioVal < 1.0) {
+    ratioClass = 'fail-c';   
+
+    ratioColor = 'var(--fail)';
+  } else if (ratioVal < 1.3) {
+    ratioClass = 'amber';    
+
+    ratioColor = 'var(--accent)';
+  }
+
+  const auditRatio = ratioVal.toFixed(2);
   const totalUp    = user.totalUp   ? formatBytes(user.totalUp)   : '—';
   const totalDown  = user.totalDown ? formatBytes(user.totalDown) : '—';
 
@@ -202,17 +217,14 @@ function renderDashboard(user, txns, results, skills) {
   const failCount = results.filter(r => r.grade < 1 && r.grade !== null).length;
   const totalDone = passCount + failCount;
 
-  const memberSince = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short' })
-    : '—';
-
   const login = user.login || 'unknown';
-  document.getElementById('topbar-login').textContent = login;
-  document.getElementById('avatar-initials').textContent = login.slice(0,2).toUpperCase();
+  const memberSince = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short' }) : '—';
 
   const timelineData = buildXPTimeline(txns);
-
   const topProjects = buildTopProjects(txns, 8);
+
+  document.getElementById('topbar-login').textContent = login;
+  document.getElementById('avatar-initials').textContent = login.slice(0,2).toUpperCase();
 
   document.getElementById('main-content').innerHTML = `
     <div class="section-header fade-up">
@@ -226,11 +238,13 @@ function renderDashboard(user, txns, results, skills) {
         <div class="stat-value amber">${formatXP(totalXP)}</div>
         <div class="stat-sub">${txns.length} transactions</div>
       </div>
-      <div class="stat-card cyan">
+
+      <div class="stat-card ${ratioClass}">
         <div class="stat-label">Audit Ratio</div>
-        <div class="stat-value cyan">${auditRatio}</div>
+        <div class="stat-value ${ratioClass}">${auditRatio}</div>
         <div class="stat-sub">↑ ${totalUp} / ↓ ${totalDown}</div>
       </div>
+
       <div class="stat-card pass-c">
         <div class="stat-label">Passed</div>
         <div class="stat-value pass-c">${passCount}</div>
@@ -251,24 +265,16 @@ function renderDashboard(user, txns, results, skills) {
     <div class="info-grid fade-up delay-2">
       <div class="info-card">
         <div class="info-card-title">Identification</div>
-        <div class="info-row">
-          <span class="info-key">Login</span>
-          <span class="info-val">${login}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-key">User ID</span>
-          <span class="info-val">#${user.id}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-key">Member since</span>
-          <span class="info-val">${memberSince}</span>
-        </div>
+        <div class="info-row"><span class="info-key">Login</span><span class="info-val">${login}</span></div>
+        <div class="info-row"><span class="info-key">User ID</span><span class="info-val">#${user.id}</span></div>
+        <div class="info-row"><span class="info-key">Member since</span><span class="info-val">${memberSince}</span></div>
       </div>
+
       <div class="info-card">
         <div class="info-card-title">Audit Status</div>
         <div class="info-row">
           <span class="info-key">Ratio</span>
-          <span class="info-val" style="color:${auditRatio >= 1 ? 'var(--pass)' : 'var(--fail)'}">${auditRatio}</span>
+          <span class="info-val" style="color:${ratioColor}">${auditRatio}</span>
         </div>
         <div class="info-row">
           <span class="info-key">Given (Up)</span>
@@ -301,7 +307,6 @@ function renderDashboard(user, txns, results, skills) {
       <div class="chart-title">Top Projects by XP <span>earned per project</span></div>
       <div id="chart-top-projects"></div>
     </div>
-
     <div class="section-header fade-up delay-4">
       <span class="section-title">Skills</span>
       <div class="section-line"></div>
